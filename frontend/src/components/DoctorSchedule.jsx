@@ -16,7 +16,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
+  Switch,
   LinearProgress,
 } from '@mui/material';
 
@@ -105,242 +105,190 @@ const DoctorSchedule = ({ doctorId: propDoctorId }) => {
     }
   };
 
-  const handleUpdateHours = async () => {
+  const handleWorkingHoursUpdate = async () => {
     try {
       const config = {
         headers: { Authorization: `Bearer ${user.token}` }
       };
-      const workingHours = workingHoursForm
-        .filter(day => day.isWorking)
-        .map(({ day, startTime, endTime }) => ({
-          day,
-          startTime,
-          endTime
-        }));
-
       await axios.put(
-        `/api/doctor-schedules/hours/${doctorId}`,
-        { workingHours },
+        `/api/doctor-schedules/${doctorId}/working-hours`,
+        workingHoursForm,
         config
       );
       setOpenHoursDialog(false);
       fetchSchedule();
     } catch (error) {
-      console.error('Error updating hours:', error);
+      console.error('Error updating working hours:', error);
     }
   };
 
-  return (
-    <Box sx={{ mt: 3 }}>
-      <Grid container spacing={3}>
-        {/* Workload Card */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Current Workload
-              </Typography>
-              {workload && (
-                <Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={workload.workloadPercentage}
-                    sx={{ mb: 2 }}
-                  />
-                  <Typography variant="body2">
-                    {workload.totalAppointments} / {workload.maxPatientsPerDay} Patients
-                  </Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
+  if (!schedule) return <LinearProgress />;
 
-        {/* Working Hours Card */}
+  return (
+    <Box sx={{ flexGrow: 1, p: 3 }}>
+      <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6">Working Hours</Typography>
-                {user.role === 'doctor' && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => setOpenHoursDialog(true)}
-                  >
-                    Update Hours
-                  </Button>
-                )}
-              </Box>
+              <Typography variant="h5" gutterBottom>
+                Weekly Schedule
+              </Typography>
               <List>
-                {schedule?.workingHours?.map((hours) => (
-                  <ListItem key={hours.day}>
+                {workingHoursForm.map((day) => (
+                  <ListItem key={day.day}>
                     <ListItemText
-                      primary={hours.day}
-                      secondary={`${hours.startTime} - ${hours.endTime}`}
+                      primary={day.day}
+                      secondary={day.isWorking 
+                        ? `${day.startTime} - ${day.endTime}` 
+                        : 'Not Working'}
                     />
                   </ListItem>
                 ))}
               </List>
+              <Button
+                variant="contained"
+                onClick={() => setOpenHoursDialog(true)}
+                sx={{ mt: 2 }}
+              >
+                Edit Working Hours
+              </Button>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Leave Requests Card */}
-        <Grid item xs={12}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6">Leave Requests</Typography>
-                {user.role === 'doctor' && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => setOpenLeaveDialog(true)}
-                  >
-                    Request Leave
-                  </Button>
-                )}
-              </Box>
-              <List>
-                {schedule?.leaves?.map((leave) => (
-                  <ListItem key={leave._id}>
+              <Typography variant="h5" gutterBottom>
+                Workload Overview
+              </Typography>
+              {workload && (
+                <List>
+                  <ListItem>
                     <ListItemText
-                      primary={`${new Date(leave.startDate).toLocaleDateString()} - ${new Date(
-                        leave.endDate
-                      ).toLocaleDateString()}`}
-                      secondary={`Reason: ${leave.reason} | Status: ${leave.status}`}
+                      primary="Total Appointments"
+                      secondary={workload.totalAppointments}
                     />
                   </ListItem>
-                ))}
-              </List>
+                  <ListItem>
+                    <ListItemText
+                      primary="Upcoming Appointments"
+                      secondary={workload.upcomingAppointments}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText
+                      primary="Average Daily Load"
+                      secondary={`${workload.averageDailyLoad} patients`}
+                    />
+                  </ListItem>
+                </List>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Leave Request Dialog */}
       <Dialog open={openLeaveDialog} onClose={() => setOpenLeaveDialog(false)}>
         <DialogTitle>Request Leave</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              type="date"
-              label="Start Date"
-              value={leaveForm.startDate}
-              onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
-              fullWidth
-              sx={{ mb: 2 }}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              type="date"
-              label="End Date"
-              value={leaveForm.endDate}
-              onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
-              fullWidth
-              sx={{ mb: 2 }}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              label="Reason"
-              value={leaveForm.reason}
-              onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-              multiline
-              rows={4}
-            />
-          </Box>
+          <TextField
+            fullWidth
+            label="Start Date"
+            type="date"
+            value={leaveForm.startDate}
+            onChange={(e) => 
+              setLeaveForm({ ...leaveForm, startDate: e.target.value })}
+            sx={{ mt: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="End Date"
+            type="date"
+            value={leaveForm.endDate}
+            onChange={(e) => 
+              setLeaveForm({ ...leaveForm, endDate: e.target.value })}
+            sx={{ mt: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="Reason"
+            multiline
+            rows={4}
+            value={leaveForm.reason}
+            onChange={(e) => 
+              setLeaveForm({ ...leaveForm, reason: e.target.value })}
+            sx={{ mt: 2 }}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenLeaveDialog(false)}>Cancel</Button>
           <Button onClick={handleLeaveRequest} variant="contained">
-            Submit
+            Request Leave
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Working Hours Dialog */}
-      <Dialog
-        open={openHoursDialog}
-        onClose={() => setOpenHoursDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Update Working Hours</DialogTitle>
+      <Dialog open={openHoursDialog} onClose={() => setOpenHoursDialog(false)}>
+        <DialogTitle>Edit Working Hours</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            {workingHoursForm.map((daySchedule, index) => (
-              <Box key={daySchedule.day} sx={{ mb: 2 }}>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={3}>
-                    <Typography>{daySchedule.day}</Typography>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Start Time"
-                      value={daySchedule.startTime}
-                      onChange={(e) => {
-                        const newHours = [...workingHoursForm];
-                        newHours[index] = { ...daySchedule, startTime: e.target.value };
-                        setWorkingHoursForm(newHours);
-                      }}
-                    >
-                      {[
-                        '09:00', '10:00', '11:00', '12:00',
-                        '13:00', '14:00', '15:00', '16:00'
-                      ].map((time) => (
-                        <MenuItem key={time} value={time}>{time}</MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="End Time"
-                      value={daySchedule.endTime}
-                      onChange={(e) => {
-                        const newHours = [...workingHoursForm];
-                        newHours[index] = { ...daySchedule, endTime: e.target.value };
-                        setWorkingHoursForm(newHours);
-                      }}
-                    >
-                      {[
-                        '10:00', '11:00', '12:00', '13:00',
-                        '14:00', '15:00', '16:00', '17:00'
-                      ].map((time) => (
-                        <MenuItem key={time} value={time}>{time}</MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Button
-                      variant={daySchedule.isWorking ? "contained" : "outlined"}
-                      color={daySchedule.isWorking ? "primary" : "error"}
-                      onClick={() => {
-                        const newHours = [...workingHoursForm];
-                        newHours[index] = { ...daySchedule, isWorking: !daySchedule.isWorking };
-                        setWorkingHoursForm(newHours);
-                      }}
-                      fullWidth
-                    >
-                      {daySchedule.isWorking ? "Working" : "Off Day"}
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Box>
-            ))}
-          </Box>
+          {workingHoursForm.map((day) => (
+            <Box key={day.day} sx={{ mb: 2 }}>
+              <Typography variant="subtitle1">{day.day}</Typography>
+              <TextField
+                fullWidth
+                label="Start Time"
+                type="time"
+                value={day.startTime}
+                onChange={(e) => {
+                  setWorkingHoursForm(prev => 
+                    prev.map(d => 
+                      d.day === day.day 
+                        ? { ...d, startTime: e.target.value }
+                        : d
+                    )
+                  );
+                }}
+                sx={{ mt: 1 }}
+              />
+              <TextField
+                fullWidth
+                label="End Time"
+                type="time"
+                value={day.endTime}
+                onChange={(e) => {
+                  setWorkingHoursForm(prev => 
+                    prev.map(d => 
+                      d.day === day.day 
+                        ? { ...d, endTime: e.target.value }
+                        : d
+                    )
+                  );
+                }}
+                sx={{ mt: 1 }}
+              />
+              <Switch
+                checked={day.isWorking}
+                onChange={(e) => {
+                  setWorkingHoursForm(prev => 
+                    prev.map(d => 
+                      d.day === day.day 
+                        ? { ...d, isWorking: e.target.checked }
+                        : d
+                    )
+                  );
+                }}
+                sx={{ mt: 2 }}
+              />
+              <Typography variant="body2" sx={{ ml: 2 }}>
+                {day.isWorking ? 'Working' : 'Not Working'}
+              </Typography>
+            </Box>
+          ))}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenHoursDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleUpdateHours}
-            variant="contained"
-          >
+          <Button onClick={handleWorkingHoursUpdate} variant="contained">
             Save Changes
           </Button>
         </DialogActions>

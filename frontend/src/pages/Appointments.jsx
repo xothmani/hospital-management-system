@@ -27,9 +27,12 @@ import {
   Badge,
   Box,
   Divider,
+  Tabs,
+  Tab,
 } from '@mui/material';
-import { Add as AddIcon, Message as MessageIcon, Send as SendIcon } from '@mui/icons-material';
+import { Add as AddIcon, Message as MessageIcon, Send as SendIcon, ViewList as ViewListIcon, CalendarMonth as CalendarIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+import AppointmentCalendar from '../components/AppointmentCalendar';
 
 function Appointments() {
   const navigate = useNavigate();
@@ -49,6 +52,7 @@ function Appointments() {
   });
   const [doctorSchedule, setDoctorSchedule] = useState(null);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
 
   const timeSlots = [
     '09:00', '09:30', '10:00', '10:30',
@@ -272,7 +276,7 @@ function Appointments() {
                 </Badge>
               </IconButton>
             )}
-            {user.role === 'patient' && (
+            {user.role === 'patient' && viewMode === 'list' && (
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -281,10 +285,32 @@ function Appointments() {
                 New Appointment
               </Button>
             )}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs value={viewMode} onChange={(e, newValue) => setViewMode(newValue)}>
+                <Tab 
+                  value="calendar" 
+                  label="Calendar" 
+                  icon={<CalendarIcon />} 
+                  iconPosition="start"
+                />
+                <Tab 
+                  value="list" 
+                  label="List View" 
+                  icon={<ViewListIcon />} 
+                  iconPosition="start"
+                />
+              </Tabs>
+            </Box>
           </Box>
         </Grid>
-        <Grid item xs={12}>
-          <TableContainer component={Paper}>
+        
+        {viewMode === 'calendar' ? (
+          <Grid item xs={12}>
+            <AppointmentCalendar />
+          </Grid>
+        ) : (
+          <Grid item xs={12}>
+            <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
@@ -363,6 +389,7 @@ function Appointments() {
             </Table>
           </TableContainer>
         </Grid>
+        )}
       </Grid>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>

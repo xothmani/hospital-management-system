@@ -17,4 +17,133 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
-} 
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar-container {
+  width: 240px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1200;
+  background-color: #f5f5f5;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 240px;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+.content-wrapper {
+  min-height: calc(100vh - 64px);
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+/* Header styles */
+.MuiAppBar-root {
+  position: fixed !important;
+  top: 0 !important;
+  left: 240px !important;
+  right: 0 !important;
+  z-index: 1300 !important;
+  width: calc(100% - 240px) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: #004d40 !important;
+  color: white !important;
+}
+
+/* Sidebar styles */
+.MuiDrawer-paper {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 240px !important;
+  z-index: 1200 !important;
+  background-color: #f5f5f5 !important;
+}
+
+/* Button styles */
+.MuiButton-containedPrimary {
+  background-color: #004d40 !important;
+  color: white !important;
+}
+
+.MuiButton-containedPrimary:hover {
+  background-color: #002c25 !important;
+}
+
+/* Card styles */
+.MuiCard-root {
+  background-color: #f5f5f5 !important;
+}
+
+
+
+/* Content area */
+.content-wrapper {
+  margin-top: 64px;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+/* Fix for content scrolling */
+.content-wrapper {
+  overflow-y: auto;
+  padding-bottom: 20px;
+  background-color: #f5f5f5;
+}
+
+/* Fix for nested routes */
+.content-wrapper > div {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  background-color: #f5f5f5;
+}
+
+/* Responsive search bar */
+.search-container {
+  transition: width 0.3s ease-in-out;
+}
+
+.search-input {
+  transition: width 0.3s ease-in-out;
+}
+
+/* Custom styles for react-big-calendar agenda view */
+.rbc-agenda-view table.rbc-agenda-table,
+.rbc-agenda-view table.rbc-agenda-table tbody,
+.rbc-agenda-view table.rbc-agenda-table tr,
+.rbc-agenda-view table.rbc-agenda-table td {
+  background-color: white !important;
+}
+
+.rbc-agenda-view table.rbc-agenda-table thead,
+.rbc-agenda-view table.rbc-agenda-table thead tr,
+.rbc-agenda-view table.rbc-agenda-table thead th {
+  background-color: #f5f5f5 !important;
+  color: #333 !important;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  border-bottom: 1px solid #eaeaea !important;
+}
+
+/* Additional selectors to target the specific table with Date, Time, Event */
+.rbc-agenda-table tr[class*="rbc-agenda-date-cell"],
+.rbc-agenda-view .rbc-agenda-date-cell,
+.rbc-agenda-view .rbc-agenda-time-cell,
+.rbc-agenda-view .rbc-agenda-event-cell {
+  background-color: white !important;
+}
+

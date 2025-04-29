@@ -5,7 +5,13 @@ const Appointment = require('../models/appointmentModel');
 // @route   POST /api/appointments
 // @access  Private
 const createAppointment = asyncHandler(async (req, res) => {
-  const { doctor, appointmentDate, timeSlot, reason } = req.body;
+  console.log('Received  data:', req.body); // 👈 Add this
+  console.log('User:', req.user);
+  console.log('Role:', req.user.role);
+  
+  const { doctor, patient, appointmentDate, timeSlot, reason } = req.body;
+  console.log('Doctor:', doctor);
+  console.log('Patient:', patient);
 
   if (!doctor || !appointmentDate || !timeSlot || !reason) {
     res.status(400);
@@ -25,21 +31,45 @@ const createAppointment = asyncHandler(async (req, res) => {
     throw new Error('This time slot is already booked');
   }
 
+  // Determine the patient ID based on who is creating the appointment
+  let patientId;
+  
+  if (req.user.role === 'doctor' || req.user.role === 'admin') {
+    // If a doctor or admin is creating the appointment, use the patient ID from the request
+    if (!patient) {
+      res.status(400);
+      throw new Error('Please specify a patient for this appointment');
+    }
+    patientId = patient;
+  } else {
+    console.log('Patient -----------ID:', req.user.id);
+    // If a patient is creating the appointment, use their own ID
+    patientId = req.user.id;
+  }
+
+  console.log(`Creating appointment with patient ID: ${patientId} and doctor ID: ${doctor}`);
+
   const appointment = await Appointment.create({
-    patient: req.user.id,
+    patient: patientId,
     doctor,
     appointmentDate,
     timeSlot,
     reason,
   });
 
-  res.status(201).json(appointment);
+  // Populate the patient and doctor information for the response
+  const populatedAppointment = await Appointment.findById(appointment._id)
+    .populate('patient', 'name email')
+    .populate('doctor', 'name email specialization');
+
+  res.status(201).json(populatedAppointment);
 });
 
 // @desc    Get all appointments
 // @route   GET /api/appointments
 // @access  Private
 const getAppointments = asyncHandler(async (req, res) => {
+  
   let query = {};
 
   // If user is a patient, show only their appointments
@@ -49,6 +79,7 @@ const getAppointments = asyncHandler(async (req, res) => {
   // If user is a doctor, show only their appointments
   else if (req.user.role === 'doctor') {
     query.doctor = req.user.id;
+    console.log('Doctor ID:', req.user.id);
   }
 
   const appointments = await Appointment.find(query)
@@ -56,6 +87,7 @@ const getAppointments = asyncHandler(async (req, res) => {
     .populate('doctor', 'name email specialization')
     .sort({ appointmentDate: 1 });
 
+  //console.log('Fetched appointments:', appointments);
   res.status(200).json(appointments);
 });
 
