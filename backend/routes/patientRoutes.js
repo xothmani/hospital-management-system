@@ -1,15 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/authMiddleware');
+const {
+  createPatient,
+  getPatients,
+  getPatientById,
+  updatePatient,
+  deletePatient
+} = require('../controllers/patientController');
+const { protect } = require('../middleware/authMiddleware');
+const { checkRole } = require('../middleware/roleMiddleware');
 
-// Since we're using the user model for patients, we'll just add specific patient routes here
-router.get('/', protect, async (req, res) => {
-  try {
-    const patients = await User.find({ role: 'patient' }).select('-password');
-    res.json(patients);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// All routes are protected and require doctor role
+router.use(protect);
+router.use(checkRole('doctor'));
+
+router.route('/')
+  .post(createPatient)
+  .get(getPatients);
+
+router.route('/:id')
+  .get(getPatientById)
+  .put(updatePatient)
+  .delete(deletePatient);
 
 module.exports = router; 

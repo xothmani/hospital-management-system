@@ -17,8 +17,11 @@ import {
   InputLabel,
   Select,
   CircularProgress,
-  Chip
+  Chip,
+  Grid,
+  FormHelperText
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -50,6 +53,17 @@ const AppointmentEvent = ({ event }) => {
 };
 
 const AppointmentCalendar = () => {
+  const { user } = useSelector((state) => state.auth);
+
+  // Return different views based on user role
+  if (user.role === 'patient') {
+    return <PatientAppointmentView />;
+  }
+
+  return <DoctorAppointmentView />;
+};
+
+const DoctorAppointmentView = () => {
   const { user } = useSelector((state) => state.auth);
   const [appointments, setAppointments] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
@@ -545,6 +559,320 @@ const AppointmentCalendar = () => {
             color="primary"
           >
             Update Appointment
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+const PatientAppointmentView = () => {
+  const { user } = useSelector((state) => state.auth);
+  const [appointments, setAppointments] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [openBookingDialog, setOpenBookingDialog] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [formData, setFormData] = useState({
+    doctor: '',
+    appointmentDate: '',
+    timeSlot: '',
+    reason: ''
+  });
+  const [formErrors, setFormErrors] = useState({
+    doctor: false,
+    appointmentDate: false,
+    timeSlot: false,
+    reason: false
+  });
+
+  // Time slots for booking
+  const timeSlots = [
+    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'
+  ];
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchDoctors();
+  }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+      const response = await axios.get('/api/appointments', config);
+      setAppointments(response.data);
+    } catch (error) {
+      toast.error('Error fetching appointments');
+    }
+  };
+
+  const fetchDoctors = async () => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+      const response = await axios.get('/api/users?role=doctor', config);
+      setDoctors(response.data);
+    } catch (error) {
+      toast.error('Error fetching doctors');
+    }
+  };
+
+  const handleBookAppointment = async () => {
+    try {
+      // Validate all required fields
+      if (!formData.doctor || !formData.appointmentDate || !formData.timeSlot || !formData.reason) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        },
+      };
+
+      // Create appointment data
+      const appointmentData = {
+        doctor: formData.doctor,
+        patient: user._id,
+        appointmentDate: formData.appointmentDate,
+        timeSlot: formData.timeSlot,
+        reason: formData.reason,
+        status: 'scheduled' // Add default status
+      };
+
+      console.log('Sending appointment data:', appointmentData); // Debug log
+
+      const response = await axios.post('/api/appointments', appointmentData, config);
+      
+      console.log('Appointment response:', response.data); // Debug log
+
+      if (response.data) {
+        toast.success('Appointment booked successfully');
+        setOpenBookingDialog(false);
+        await fetchAppointments(); // Refresh the appointments list
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Booking error:', error.response?.data || error);
+      toast.error(
+        error.response?.data?.message || 
+        'Error booking appointment. Please try again.'
+      );
+    }
+  };
+
+  const handleCancelAppointment = async (appointmentId) => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+      await axios.put(`/api/appointments/${appointmentId}`, { status: 'cancelled' }, config);
+      toast.success('Appointment cancelled successfully');
+      fetchAppointments();
+    } catch (error) {
+      toast.error('Error cancelling appointment');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      doctor: '',
+      appointmentDate: '',
+      timeSlot: '',
+      reason: ''
+    });
+    setSelectedDoctor(null);
+  };
+
+  // Add validation before submitting
+  const validateForm = () => {
+    const errors = {
+      doctor: !formData.doctor,
+      appointmentDate: !formData.appointmentDate,
+      timeSlot: !formData.timeSlot,
+      reason: !formData.reason || formData.reason.trim().length === 0
+    };
+    
+    setFormErrors(errors);
+    return !Object.values(errors).some(error => error);
+  };
+
+  return (
+    <Box sx={{ p: 2 }}>
+      {/* Header with Book Appointment Button */}
+      <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h5">My Appointments</Typography>
+          <Button 
+            variant="contained" 
+            onClick={() => setOpenBookingDialog(true)}
+            startIcon={<AddIcon />}
+          >
+            Book New Appointment
+          </Button>
+        </Box>
+      </Paper>
+
+      {/* List of Current Appointments */}
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>Upcoming Appointments</Typography>
+        {appointments.length === 0 ? (
+          <Typography color="textSecondary">No appointments scheduled</Typography>
+        ) : (
+          appointments.map((appointment) => (
+            <Paper 
+              key={appointment._id} 
+              elevation={1} 
+              sx={{ mb: 2, p: 2, borderLeft: 6, 
+                borderColor: 
+                  appointment.status === 'scheduled' ? 'primary.main' :
+                  appointment.status === 'completed' ? 'success.main' :
+                  'error.main'
+              }}
+            >
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography><strong>Doctor:</strong> Dr. {appointment.doctor.name}</Typography>
+                  <Typography><strong>Specialization:</strong> {appointment.doctor.specialization}</Typography>
+                  <Typography><strong>Date:</strong> {new Date(appointment.appointmentDate).toLocaleDateString()}</Typography>
+                  <Typography><strong>Time:</strong> {appointment.timeSlot}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography><strong>Status:</strong> {appointment.status}</Typography>
+                  <Typography><strong>Reason:</strong> {appointment.reason}</Typography>
+                  {appointment.status === 'scheduled' && (
+                    <Button 
+                      color="error" 
+                      variant="outlined"
+                      onClick={() => handleCancelAppointment(appointment._id)}
+                      sx={{ mt: 1 }}
+                    >
+                      Cancel Appointment
+                    </Button>
+                  )}
+                </Grid>
+              </Grid>
+            </Paper>
+          ))
+        )}
+      </Paper>
+
+      {/* Booking Dialog */}
+      <Dialog 
+        open={openBookingDialog} 
+        onClose={() => setOpenBookingDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Book New Appointment</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <FormControl fullWidth error={formErrors.doctor}>
+              <InputLabel>Select Doctor</InputLabel>
+              <Select
+                value={formData.doctor}
+                onChange={(e) => {
+                  setFormData({ ...formData, doctor: e.target.value });
+                  setFormErrors({ ...formErrors, doctor: false });
+                }}
+                label="Select Doctor"
+              >
+                {doctors.map((doctor) => (
+                  <MenuItem key={doctor._id} value={doctor._id}>
+                    Dr. {doctor.name} - {doctor.specialization}
+                  </MenuItem>
+                ))}
+              </Select>
+              {formErrors.doctor && (
+                <FormHelperText>Please select a doctor</FormHelperText>
+              )}
+            </FormControl>
+
+            <TextField
+              label="Appointment Date"
+              type="date"
+              value={formData.appointmentDate}
+              onChange={(e) => {
+                setFormData({ ...formData, appointmentDate: e.target.value });
+                setFormErrors({ ...formErrors, appointmentDate: false });
+              }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: new Date().toISOString().split('T')[0] }}
+              fullWidth
+              error={formErrors.appointmentDate}
+              helperText={formErrors.appointmentDate ? 'Please select a date' : ''}
+            />
+
+            <FormControl fullWidth error={formErrors.timeSlot}>
+              <InputLabel>Time Slot</InputLabel>
+              <Select
+                value={formData.timeSlot}
+                onChange={(e) => {
+                  setFormData({ ...formData, timeSlot: e.target.value });
+                  setFormErrors({ ...formErrors, timeSlot: false });
+                }}
+                label="Time Slot"
+              >
+                {timeSlots.map((slot) => (
+                  <MenuItem key={slot} value={slot}>
+                    {slot}
+                  </MenuItem>
+                ))}
+              </Select>
+              {formErrors.timeSlot && (
+                <FormHelperText>Please select a time slot</FormHelperText>
+              )}
+            </FormControl>
+
+            <TextField
+              label="Reason for Appointment"
+              multiline
+              rows={3}
+              value={formData.reason}
+              onChange={(e) => {
+                setFormData({ ...formData, reason: e.target.value });
+                setFormErrors({ ...formErrors, reason: false });
+              }}
+              fullWidth
+              error={formErrors.reason}
+              helperText={formErrors.reason ? 'Please provide a reason' : ''}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setOpenBookingDialog(false);
+            resetForm();
+            setFormErrors({
+              doctor: false,
+              appointmentDate: false,
+              timeSlot: false,
+              reason: false
+            });
+          }}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              if (validateForm()) {
+                handleBookAppointment();
+              }
+            }}
+            variant="contained"
+            color="primary"
+          >
+            Book Appointment
           </Button>
         </DialogActions>
       </Dialog>
