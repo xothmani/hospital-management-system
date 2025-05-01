@@ -126,7 +126,10 @@ const updateProfile = asyncHandler(async (req, res) => {
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find();
+  const { role } = req.query;
+  // If role is provided in query params, filter by role, otherwise get all users
+  const query = role ? { role } : {};
+  const users = await User.find(query);
   res.status(200).json(users);
 });
 

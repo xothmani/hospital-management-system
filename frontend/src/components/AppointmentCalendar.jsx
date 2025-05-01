@@ -639,26 +639,28 @@ const PatientAppointmentView = () => {
         },
       };
 
-      // Create appointment data
+      // First get the patient ID for the current user
+      const patientResponse = await axios.get(`/api/patients/user/${user._id}`, config);
+      const patientId = patientResponse.data._id;
+
+      // Create appointment data with patient ID instead of user ID
       const appointmentData = {
         doctor: formData.doctor,
-        patient: user._id,
+        patient: patientId,
         appointmentDate: formData.appointmentDate,
         timeSlot: formData.timeSlot,
         reason: formData.reason,
-        status: 'scheduled' // Add default status
+        status: 'scheduled'
       };
 
-      console.log('Sending appointment data:', appointmentData); // Debug log
+      console.log('Sending appointment data:', appointmentData);
 
       const response = await axios.post('/api/appointments', appointmentData, config);
       
-      console.log('Appointment response:', response.data); // Debug log
-
       if (response.data) {
         toast.success('Appointment booked successfully');
         setOpenBookingDialog(false);
-        await fetchAppointments(); // Refresh the appointments list
+        await fetchAppointments();
         resetForm();
       }
     } catch (error) {

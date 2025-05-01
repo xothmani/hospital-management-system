@@ -159,10 +159,25 @@ const deletePatient = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Patient removed' });
 });
 
+// @desc    Get patient by user ID
+// @route   GET /api/patients/user/:userId
+// @access  Private
+const getPatientByUserId = asyncHandler(async (req, res) => {
+  const patient = await Patient.findOne({ email: req.user.email });
+
+  if (patient) {
+    res.status(200).json(patient);
+  } else {
+    res.status(404);
+    throw new Error('Patient not found');
+  }
+});
+
 module.exports = {
   createPatient,
   getPatients,
   getPatientById,
   updatePatient,
-  deletePatient
+  deletePatient,
+  getPatientByUserId
 }; 

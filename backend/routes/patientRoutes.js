@@ -5,12 +5,16 @@ const {
   getPatients,
   getPatientById,
   updatePatient,
-  deletePatient
+  deletePatient,
+  getPatientByUserId
 } = require('../controllers/patientController');
 const { protect } = require('../middleware/authMiddleware');
 const { checkRole } = require('../middleware/roleMiddleware');
 
-// All routes are protected and require doctor role
+// Add the user-specific route before the doctor role middleware
+router.get('/user/:userId', protect, getPatientByUserId);
+
+// All other routes are protected and require doctor role
 router.use(protect);
 router.use(checkRole('doctor'));
 
