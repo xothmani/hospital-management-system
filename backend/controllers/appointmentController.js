@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Appointment = require('../models/appointmentModel');
+const Patient = require('../models/Patient');
 
 // @desc    Create new appointment
 // @route   POST /api/appointments
@@ -42,9 +43,14 @@ const createAppointment = asyncHandler(async (req, res) => {
     }
     patientId = patient;
   } else {
-    console.log('Patient -----------ID:', req.user.id);
-    // If a patient is creating the appointment, use their own ID
-    patientId = req.user.id;
+    // If a patient is creating the appointment, get their patient ID from Patient model
+    const patientRecord = await Patient.findOne({ email: req.user.email });
+    if (!patientRecord) {
+      res.status(404);
+      throw new Error('Patient record not found');
+    }
+    patientId = patientRecord._id;
+    console.log('Found patient ID:', patientId);
   }
 
   console.log(`Creating appointment with patient ID: ${patientId} and doctor ID: ${doctor}`);
@@ -69,12 +75,16 @@ const createAppointment = asyncHandler(async (req, res) => {
 // @route   GET /api/appointments
 // @access  Private
 const getAppointments = asyncHandler(async (req, res) => {
-  
   let query = {};
 
-  // If user is a patient, show only their appointments
+  // If user is a patient, get their patient ID first and then show their appointments
   if (req.user.role === 'patient') {
-    query.patient = req.user.id;
+    const patientRecord = await Patient.findOne({ email: req.user.email });
+    if (!patientRecord) {
+      res.status(404);
+      throw new Error('Patient record not found');
+    }
+    query.patient = patientRecord._id;
   }
   // If user is a doctor, show only their appointments
   else if (req.user.role === 'doctor') {
@@ -87,7 +97,6 @@ const getAppointments = asyncHandler(async (req, res) => {
     .populate('doctor', 'name email specialization')
     .sort({ appointmentDate: 1 });
 
-  //console.log('Fetched appointments:', appointments);
   res.status(200).json(appointments);
 });
 

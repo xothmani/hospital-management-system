@@ -642,7 +642,7 @@ const PatientAppointmentView = () => {
       // First get the patient ID for the current user
       const patientResponse = await axios.get(`/api/patients/user/${user._id}`, config);
       const patientId = patientResponse.data._id;
-
+      console.log('Patient ID:', patientId);
       // Create appointment data with patient ID instead of user ID
       const appointmentData = {
         doctor: formData.doctor,
