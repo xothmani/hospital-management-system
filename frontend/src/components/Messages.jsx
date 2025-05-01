@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getMessages, sendMessage, markAsRead } from '../features/messages/messageSlice';
+import {
+  getMessages,
+  fetchPatients,
+  fetchDoctors,
+  fetchAllUsers,
+  sendMessage,
+  markAsRead,
+  setSelectedMessages,
+} from '../features/messages/messageSlice';
+import axios from 'axios';
 import {
   Box,
   Paper,
@@ -19,54 +28,60 @@ import { Send as SendIcon } from '@mui/icons-material';
 function Messages() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const { messages, isLoading } = useSelector((state) => state.messages);
+  const { messages, contacts, selectedMessages, isLoading } = useSelector(
+    (state) => state.messages
+  );
   const [newMessage, setNewMessage] = useState('');
   const [selectedContact, setSelectedContact] = useState(null);
 
+  // Fetch contacts and conversations on mount
   useEffect(() => {
-    dispatch(getMessages());
-  }, [dispatch]);
+    dispatch(getMessages()); // Fetch conversations
+    if (user.role === 'doctor') {
+      dispatch(fetchPatients());
+    } else if (user.role === 'patient') {
+      dispatch(fetchDoctors());
+    } else if (user.role === 'admin') {
+      dispatch(fetchAllUsers());
+    }
+  }, [dispatch, user.role]);
 
-  // Get unique contacts based on user role
-  const getUniqueContacts = () => {
-    const uniqueContacts = new Map();
-    messages.forEach((msg) => {
-      const contact = user.role === 'doctor' ? msg.patient : msg.doctor;
-      if (contact) {
-        uniqueContacts.set(contact._id, contact);
-      }
-    });
-    return Array.from(uniqueContacts.values());
-  };
-
-  // Filter messages for selected contact
-  const filteredMessages = selectedContact
-    ? messages.filter((msg) =>
-        user.role === 'doctor'
-          ? msg.patient?._id === selectedContact._id
-          : msg.doctor?._id === selectedContact._id
-      )
-    : [];
-
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (newMessage.trim() && selectedContact) {
-      const messageData = {
-        content: newMessage,
-        recipientId: selectedContact._id,
-        recipientRole: user.role === 'doctor' ? 'patient' : 'doctor',
+  // Fetch messages for the selected contact
+  const fetchMessagesWithContact = async (contactId) => {
+    try {
+      const token = user.token;
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       };
-      dispatch(sendMessage(messageData));
-      setNewMessage('');
+      const response = await axios.get(`/api/messages/${contactId}`, config);
+      dispatch(setSelectedMessages(response.data));
+    } catch (error) {
+      console.error('Error fetching messages:', error);
     }
   };
 
   const handleContactSelect = (contact) => {
     setSelectedContact(contact);
+    fetchMessagesWithContact(contact._id);
     // Mark unread messages as read
-    filteredMessages
-      .filter((msg) => !msg.isRead && msg.sender._id !== user._id)
-      .forEach((msg) => dispatch(markAsRead(msg._id)));
+    const unreadMessages = selectedMessages.filter(
+      (msg) => !msg.read && msg.sender._id !== user._id
+    );
+    unreadMessages.forEach((msg) => dispatch(markAsRead(msg._id)));
+  };
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (newMessage.trim() && selectedContact) {
+      const messageData = {
+        receiverId: selectedContact._id,
+        content: newMessage,
+      };
+      dispatch(sendMessage(messageData));
+      setNewMessage('');
+    }
   };
 
   if (isLoading) {
@@ -86,14 +101,11 @@ function Messages() {
         </Typography>
         <Divider />
         <List>
-          {getUniqueContacts().map((contact) => {
-            const unreadCount = messages.filter(
-              (msg) =>
-                !msg.isRead &&
-                msg.sender._id === contact._id &&
-                ((user.role === 'doctor' && msg.patient?._id === contact._id) ||
-                  (user.role === 'patient' && msg.doctor?._id === contact._id))
-            ).length;
+          {contacts.map((contact) => {
+            const conversation = messages.find(
+              (conv) => conv.user._id === contact._id
+            );
+            const unreadCount = conversation ? conversation.unreadCount : 0;
 
             return (
               <ListItem
@@ -105,7 +117,13 @@ function Messages() {
                 <ListItemText
                   primary={
                     <Badge badgeContent={unreadCount} color="error">
-                      <Typography>{contact.name}</Typography>
+                      <Typography>
+                        {contact.name}{' '}
+                        {contact.role && user.role === 'admin' ? `(${contact.role})` : ''}
+                        {contact.specialization && user.role === 'patient'
+                          ? `(${contact.specialization})`
+                          : ''}
+                      </Typography>
                     </Badge>
                   }
                 />
@@ -119,7 +137,7 @@ function Messages() {
       <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
           {selectedContact ? (
-            filteredMessages.map((msg) => (
+            selectedMessages.map((msg) => (
               <Box
                 key={msg._id}
                 sx={{

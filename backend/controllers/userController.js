@@ -132,6 +132,43 @@ const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find(query);
   res.status(200).json(users);
 });
+const getPatients = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'doctor') {
+    res.status(403);
+    throw new Error('Only doctors can access patient lists');
+  }
+  const patients = await User.find({ role: 'patient' }).select('name _id');
+  console.log('Patients found:', patients); // Add this log
+  res.json(patients || []);
+});
+
+// @desc    Get list of doctors (for patients)
+// @route   GET /api/users/doctors
+// @access  Private
+const getDoctors = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'patient') {
+    res.status(403);
+    throw new Error('Only patients can access doctor lists');
+  }
+  const doctors = await User.find({ role: 'doctor' }).select('name _id specialization');
+  console.log('Doctors found:', doctors); // Add this log
+  res.json(doctors || []);
+});
+
+// @desc    Get list of all users (for admins), split into staff and patients
+// @route   GET /api/users/all
+// @access  Private
+const getAllUsers = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') {
+    res.status(403);
+    throw new Error('Only admins can access all users');
+  }
+  const staff = await User.find({ role: { $in: ['doctor', 'nurse', 'staff'] } }).select('name _id role');
+  const patients = await User.find({ role: 'patient' }).select('name _id role');
+  console.log('Staff found:', staff); // Add this log
+  console.log('Patients found for admin:', patients); // Add this log
+  res.json({ staff: staff || [], patients: patients || [] });
+});
 
 // Generate JWT
 const generateToken = (id) => {
@@ -146,4 +183,7 @@ module.exports = {
   getMe,
   updateProfile,
   getUsers,
+  getPatients,
+  getDoctors,
+  getAllUsers,
 }; 
