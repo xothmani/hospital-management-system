@@ -54,7 +54,7 @@ const Layout = ({ children }) => {
           flexDirection: 'column',
           height: '100vh',
           overflow: 'hidden',
-          backgroundColor: '#f9f9f9',
+          backgroundColor: 'transparent',
           boxShadow: 'inset 5px 0 5px -5px rgba(0,0,0,0.1)'
         }}
       >
@@ -65,7 +65,7 @@ const Layout = ({ children }) => {
             p: 3, 
             pt: 10, // Add padding top to create space below header
             overflow: 'auto',
-            backgroundColor: '#f9f9f9'
+            backgroundColor: 'transparent'
           }}
         >
           {children}
